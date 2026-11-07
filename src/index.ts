@@ -3,7 +3,7 @@ import path from 'path';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import i18n from 'i18n';
-import * as admin from 'firebase-admin';
+import { getApp, deleteApp } from 'firebase-admin/app';
 import { supportedLocales } from './locales';
 
 import errorHandler from './middleware/errorHandler';
@@ -65,7 +65,7 @@ const gracefulShutdown = async (signal: string) => {
     try {
       await shutdownPostHog();
       if (!process.env.CI) {
-        await admin.app().delete();
+        await deleteApp(getApp());
         console.log('Firebase connections closed'); // eslint-disable-line no-console
       }
     } catch (err) {

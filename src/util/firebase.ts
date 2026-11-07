@@ -1,4 +1,16 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import {
+  getFirestore,
+  FieldValue as FirestoreFieldValue,
+  Timestamp as FirestoreTimestamp,
+  Filter as FirestoreFilter,
+} from 'firebase-admin/firestore';
+import type {
+  Firestore,
+  DocumentData,
+  CollectionReference,
+} from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import {
   FIREBASE_STORAGE_BUCKET,
   FIRESTORE_USER_ROOT,
@@ -30,28 +42,28 @@ import type {
   OAuthClientInfo,
 } from '../types/firestore';
 
-let database: admin.firestore.Firestore | undefined;
+let database: Firestore | undefined;
 if (!process.env.CI) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as unknown as string),
+  initializeApp({
+    credential: cert(serviceAccount as unknown as string),
     storageBucket: FIREBASE_STORAGE_BUCKET,
   });
 
-  database = admin.firestore();
+  database = getFirestore();
 }
 
 if (!database && !process.env.CI) {
   throw new Error('Firebase database not initialized');
 }
 
-export const db = database as admin.firestore.Firestore;
+export const db = database as Firestore;
 
-function getCollection<T = admin.firestore.DocumentData>(
+function getCollection<T = DocumentData>(
   root: string | undefined,
-): admin.firestore.CollectionReference<T> {
+): CollectionReference<T> {
   // In CI environment, allow undefined collections (they won't be used)
   if (process.env.CI) {
-    return {} as admin.firestore.CollectionReference<T>;
+    return {} as CollectionReference<T>;
   }
 
   // In non-CI environments, validate configuration
@@ -62,7 +74,7 @@ function getCollection<T = admin.firestore.DocumentData>(
     throw new Error('Firebase database not initialized');
   }
 
-  return database.collection(root) as admin.firestore.CollectionReference<T>;
+  return database.collection(root) as CollectionReference<T>;
 }
 
 export const userCollection = getCollection<UserData>(FIRESTORE_USER_ROOT);
@@ -103,18 +115,19 @@ export const likerIdHandleCollection = getCollection<LikerIdHandleData>(
     || (FIRESTORE_USER_ROOT ? `${FIRESTORE_USER_ROOT}Handle` : undefined),
 );
 
-function getBucket(): ReturnType<admin.storage.Storage['bucket']> {
+function getBucket(): ReturnType<ReturnType<typeof getStorage>['bucket']> {
   // In CI environment, allow undefined bucket (it won't be used)
   if (process.env.CI) {
-    return {} as ReturnType<admin.storage.Storage['bucket']>;
+    return {} as ReturnType<ReturnType<typeof getStorage>['bucket']>;
   }
   if (!FIREBASE_STORAGE_BUCKET) {
     throw new Error('Firebase storage bucket not defined');
   }
-  return admin.storage().bucket();
+  return getStorage().bucket();
 }
 
 export const bucket = getBucket();
 
-export { admin };
-export const { FieldValue, Timestamp, Filter } = admin.firestore;
+export const FieldValue = FirestoreFieldValue;
+export const Timestamp = FirestoreTimestamp;
+export const Filter = FirestoreFilter;

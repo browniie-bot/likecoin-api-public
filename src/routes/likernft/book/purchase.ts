@@ -1,3 +1,4 @@
+import type { Transaction } from 'firebase-admin/firestore';
 import { Router } from 'express';
 import { ValidationError } from '../../../util/ValidationError';
 import {
@@ -7,7 +8,7 @@ import {
   isShippedProduct,
 } from '../../../util/api/likernft/book';
 import {
-  admin, db, likeNFTBookCartCollection, likeNFTBookCollection, FieldValue,
+  db, likeNFTBookCartCollection, likeNFTBookCollection, FieldValue,
 } from '../../../util/firebase';
 import publisher from '../../../util/gcloudPub';
 import {
@@ -717,7 +718,7 @@ router.post(
           console.error(`Failed to verify delivery tx ${txHash} for class ${classId}:`, err);
         }
       }
-      const result = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+      const result = await db.runTransaction(async (t: Transaction) => {
         const paymentData = await updateNFTBookPostDeliveryData({
           classId,
           paymentId,

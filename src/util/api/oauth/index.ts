@@ -1,9 +1,9 @@
+import type { Transaction } from 'firebase-admin/firestore';
 import crypto from 'crypto';
 import base64url from 'base64url';
 
 import { getProviderJWTSecret, jwtSignForAZP } from '../../jwt';
 import {
-  admin,
   db,
   oAuthClientCollection as oAuthClientDbRef,
 } from '../../firebase';
@@ -34,7 +34,7 @@ export async function autoGenerateUserTokenForClient(req, platform, user) {
   );
 
   const spUserRef = targetClient.ref.collection('users').doc(user);
-  const currentRefreshToken = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  const currentRefreshToken = await db.runTransaction(async (t: Transaction) => {
     const spUserDoc = await spUserRef.get();
     const {
       ts = Date.now(),

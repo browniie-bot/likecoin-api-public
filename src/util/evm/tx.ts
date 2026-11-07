@@ -1,3 +1,4 @@
+import type { Transaction } from 'firebase-admin/firestore';
 import {
   type Chain,
   type HttpTransport,
@@ -7,7 +8,7 @@ import {
   encodeFunctionData,
   SimulateContractParameters,
 } from 'viem';
-import { admin, db, txCollection as txLogRef } from '../firebase';
+import { db, txCollection as txLogRef } from '../firebase';
 import { getEVMClient } from './client';
 import publisher from '../gcloudPub';
 import { PUBSUB_TOPIC_MISC } from '../../constant';
@@ -25,7 +26,7 @@ function getNonceCounterRef(address: string) {
 // be handed the same nonce by a plain eth_getTransactionCount read.
 async function reserveNonce(address: string, transactionCount: number): Promise<number> {
   const counterRef = getNonceCounterRef(address);
-  const pendingNonce = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  const pendingNonce = await db.runTransaction(async (t: Transaction) => {
     const d = await t.get(counterRef);
     const stored = d.data()?.value as number | undefined;
     // The on-chain confirmed nonce is the floor; the counter tracks reservations ahead of it.
@@ -55,7 +56,7 @@ async function reserveNonce(address: string, transactionCount: number): Promise<
 // reserveNonce reclaims the counter anyway.
 async function commitNonce(address: string, nonce: number): Promise<void> {
   const counterRef = getNonceCounterRef(address);
-  await db.runTransaction((t: admin.firestore.Transaction) => t.get(counterRef).then((d) => {
+  await db.runTransaction((t: Transaction) => t.get(counterRef).then((d) => {
     const data = d.data();
     if (data && nonce + 1 > (data.value as number)) {
       t.update(counterRef, {
@@ -71,7 +72,7 @@ async function commitNonce(address: string, nonce: number): Promise<void> {
 // Tip check avoids erasing a gap a concurrent send moved past.
 async function rollbackNonce(address: string, nonce: number): Promise<void> {
   const counterRef = getNonceCounterRef(address);
-  await db.runTransaction((t: admin.firestore.Transaction) => t.get(counterRef)
+  await db.runTransaction((t: Transaction) => t.get(counterRef)
     .then((d) => {
       const data = d.data();
       if (data && (data.value as number) === nonce + 1) {

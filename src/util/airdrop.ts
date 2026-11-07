@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js';
 import { PUBSUB_TOPIC_MISC } from '../constant';
-import type { admin } from './firebase';
+import type { DocumentReference } from 'firebase-admin/firestore';
 import publisher from './gcloudPub';
 import { isValidEVMAddress } from './evm';
 import {
@@ -54,7 +54,7 @@ export async function payLIKEAirdrop({
   logType,
   logPayload = {},
 }: {
-  ref: admin.firestore.DocumentReference;
+  ref: DocumentReference;
   claimSlot: () => Promise<boolean>;
   wallet?: string;
   amountUSD: number;
