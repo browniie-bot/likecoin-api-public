@@ -1,6 +1,7 @@
+import type { Transaction } from 'firebase-admin/firestore';
 import { BigNumber } from 'bignumber.js';
 import {
-  admin, db, FieldValue, likeNFTBookCartCollection,
+  db, FieldValue, likeNFTBookCartCollection,
 } from '../../../firebase';
 import { calculateAirdropAmountInLIKE, getAirdropRatio, payLIKEAirdrop } from '../../../airdrop';
 import type { TransactionFeeInfo } from './type';
@@ -32,7 +33,7 @@ export function calculateBookAirdropAmountInLIKE(
 // delivery (or the same one retried) already holds it.
 async function claimAirdropSlot(cartId: string): Promise<boolean> {
   const cartRef = likeNFTBookCartCollection.doc(cartId);
-  return db.runTransaction(async (t: admin.firestore.Transaction) => {
+  return db.runTransaction(async (t: Transaction) => {
     const doc = await t.get(cartRef);
     if (!doc.exists || doc.data()?.airdropStatus) return false;
     t.update(cartRef, {

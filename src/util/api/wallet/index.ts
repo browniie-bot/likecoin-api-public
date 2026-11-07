@@ -1,10 +1,10 @@
+import type { Transaction } from 'firebase-admin/firestore';
 import { checksumAddress } from 'viem';
 import { createAirtablePublicationRecord } from '../../airtable';
 import { isValidLikeAddress } from '../../cosmos';
 import { getNFTClassDataById, isEVMClassId } from '../../evm/nft';
 import { isValidEVMAddress } from '../../evm';
 import {
-  admin,
   db,
   FieldValue,
   likeNFTBookCollection,
@@ -67,7 +67,7 @@ export async function checkBookUserEVMWallet(likeWallet: string) {
 async function migrateBookUser(likeWallet: string, evmWallet: string, method: 'manual' | 'auto' = 'manual') {
   try {
     const { userExists, alreadyMigrated } = await db.runTransaction(
-      async (t: admin.firestore.Transaction) => {
+      async (t: Transaction) => {
         const [userDoc, userCommissionCollection, evmUserDoc] = await Promise.all([
           t.get(likeNFTBookUserCollection.doc(likeWallet)),
           t.get(likeNFTBookUserCollection.doc(likeWallet).collection('commissions')),
@@ -142,13 +142,13 @@ async function migrateBookUser(likeWallet: string, evmWallet: string, method: 'm
 
 async function migrateBookOwner(likeWallet: string, evmWallet: string) {
   try {
-    await db.runTransaction(async (t: admin.firestore.Transaction) => {
+    await db.runTransaction(async (t: Transaction) => {
       const bookQuery = await t.get(likeNFTBookCollection.where('ownerWallet', '==', likeWallet).where('chain', '==', 'base'));
       bookQuery.docs.forEach((doc) => {
         t.update(doc.ref, { ownerWallet: evmWallet });
       });
     });
-    await db.runTransaction(async (t: admin.firestore.Transaction) => {
+    await db.runTransaction(async (t: Transaction) => {
       const bookQuery = await t.get(likeNFTBookCollection.where(`connectedWallets.${likeWallet}`, '>', 0));
       bookQuery.docs.forEach((doc) => {
         // TODO: change .where to filter evm class id
@@ -173,7 +173,7 @@ async function migrateBookOwner(likeWallet: string, evmWallet: string) {
 
 async function migrateLikerId(likeWallet:string, evmWallet: string, method: 'manual' | 'auto' = 'manual') {
   try {
-    const likerId = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+    const likerId = await db.runTransaction(async (t: Transaction) => {
       const [evmQuery, userQuery] = await Promise.all([
         t.get(userCollection.where('evmWallet', '==', evmWallet).limit(1)),
         t.get(userCollection.where('likeWallet', '==', likeWallet).limit(1)),
@@ -212,7 +212,7 @@ async function linkEVMWalletToLikerId(likerId: string, evmWallet: string, method
     // Login and /users/new both query evmWallet in EIP-55 form; a raw-case value
     // would evade the collision check below and be invisible to login.
     const checksummedEVMWallet = checksumAddress(evmWallet as `0x${string}`);
-    await db.runTransaction(async (t: admin.firestore.Transaction) => {
+    await db.runTransaction(async (t: Transaction) => {
       const userRef = userCollection.doc(likerId);
       const [userDoc, evmQuery] = await Promise.all([
         t.get(userRef),
@@ -283,7 +283,7 @@ export async function migrateBookClassId(likeClassId: string, evmClassId: string
     if (evmData?.likecoin?.classId !== likeClassId) {
       throw new Error('EVM_CLASS_ID_NOT_MATCH_LIKE_CLASS_ID');
     }
-    const res = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+    const res = await db.runTransaction(async (t: Transaction) => {
       const migratedClassIds: string[] = [];
       const migratedClassDatas: any[] = [];
       const [bookListingDoc, bookTransactionQuery] = await Promise.all([

@@ -1,6 +1,6 @@
 import uuidv4 from 'uuid/v4';
 import Stripe from 'stripe';
-import { firestore } from 'firebase-admin';
+import { Timestamp, type FieldValue as FirestoreFieldValue, type Transaction } from 'firebase-admin/firestore';
 
 import { getNFTClassDataById, isNonNFTProduct, isShippedProduct } from '.';
 import { ValidationError } from '../../../ValidationError';
@@ -18,7 +18,7 @@ import {
   normalizeLanguageForStripeLocale,
 } from '../../../stripe';
 import {
-  admin, likeNFTBookCollection, FieldValue, db, likeNFTBookUserCollection,
+  likeNFTBookCollection, FieldValue, db, likeNFTBookUserCollection,
 } from '../../../firebase';
 import publisher from '../../../gcloudPub';
 import {
@@ -553,7 +553,7 @@ export async function processNFTBookPurchaseTxGet(t, classId, paymentId, {
   }
 
   priceInfo.sold += quantity;
-  priceInfo.lastSaleTimestamp = firestore.Timestamp.now();
+  priceInfo.lastSaleTimestamp = Timestamp.now();
 
   return {
     listingData: docData,
@@ -1028,7 +1028,7 @@ export async function claimNFTBook(
     quantity,
     feeInfo,
     from,
-  } = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  } = await db.runTransaction(async (t: Transaction) => {
     const doc = await t.get(docRef);
     const docData = doc.data();
     if (!docData) {
@@ -1081,7 +1081,7 @@ export async function claimNFTBook(
       throw autoDeliverErr;
     }
 
-    const { isGift, giftInfo } = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+    const { isGift, giftInfo } = await db.runTransaction(async (t: Transaction) => {
       // eslint-disable-next-line no-use-before-define
       const paymentDocData = await updateNFTBookPostDeliveryData({
         classId,
@@ -1214,7 +1214,7 @@ export async function setNFTBookBuyerMessage(
 ) {
   const bookRef = likeNFTBookCollection.doc(classId);
   const docRef = bookRef.collection('transactions').doc(paymentId);
-  await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  await db.runTransaction(async (t: Transaction) => {
     const doc = await t.get(docRef);
     const docData = doc.data();
     if (!docData) throw new ValidationError('PAYMENT_ID_NOT_FOUND', 404);
@@ -1258,7 +1258,7 @@ export async function markNFTBookMerchOrderShipped({
 }) {
   const bookRef = likeNFTBookCollection.doc(classId);
   const paymentRef = bookRef.collection('transactions').doc(paymentId);
-  return db.runTransaction(async (t: admin.firestore.Transaction) => {
+  return db.runTransaction(async (t: Transaction) => {
     const paymentDoc = await t.get(paymentRef);
     const paymentData = paymentDoc.data() as BookPurchaseData | undefined;
     if (!paymentData) throw new ValidationError('PAYMENT_ID_NOT_FOUND', 404);
@@ -1267,7 +1267,7 @@ export async function markNFTBookMerchOrderShipped({
       throw new ValidationError('ORDER_NOT_SHIPPABLE', 409);
     }
     const isFirstShipment = status === 'processing';
-    const update: Record<string, string | firestore.FieldValue> = {
+    const update: Record<string, string | FirestoreFieldValue> = {
       status: 'shipped',
       trackingNumber,
     };

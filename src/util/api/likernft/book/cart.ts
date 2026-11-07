@@ -1,3 +1,4 @@
+import type { Transaction } from 'firebase-admin/firestore';
 import crypto from 'crypto';
 import uuidv4 from 'uuid/v4';
 import Stripe from 'stripe';
@@ -39,7 +40,6 @@ import { depositLikeCollectiveReward } from '../../../evm/likeCollective';
 import { payBookPurchaseAirdrop } from './airdrop';
 import { getLIKEPrice } from '../likePrice';
 import {
-  admin,
   db,
   FieldValue,
   likeNFTBookCartCollection,
@@ -197,7 +197,7 @@ export async function claimNFTBookCart(
 ) {
   const cartRef = likeNFTBookCartCollection.doc(cartId);
 
-  const cartData = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  const cartData = await db.runTransaction(async (t: Transaction) => {
     const cartDoc = await t.get(cartRef);
     if (!cartDoc.exists) throw new ValidationError('CART_ID_NOT_FOUND');
     const docData = cartDoc.data();
@@ -991,7 +991,7 @@ export async function processNFTBookCartPurchase({
   shipping?: Pick<BookPurchaseData, 'phone' | 'shippingDetails'>;
 }) {
   const cartRef = likeNFTBookCartCollection.doc(cartId);
-  const infos = await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  const infos = await db.runTransaction(async (t: Transaction) => {
     const cartDoc = await t.get(cartRef);
     const cartData = cartDoc.data();
     if (!cartData) throw new ValidationError('CART_ID_NOT_FOUND');
@@ -1256,7 +1256,7 @@ export async function createFreeBookCartForFreeIds({
     customPriceDiffInDecimal: 0,
     royaltyToSplit: 0,
   };
-  await db.runTransaction(async (t: admin.firestore.Transaction) => {
+  await db.runTransaction(async (t: Transaction) => {
     const query = await t.get(likeNFTBookCartCollection
       .where('classIds', '==', classIds)
       .where('wallet', '==', evmWallet));
